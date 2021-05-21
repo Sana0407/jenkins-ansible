@@ -1,0 +1,46 @@
+pipeline
+{
+    agent any
+    environment {
+      DOCKER_TAG = getVersion()
+    }
+    stages
+    {
+        stage('SCM')
+        {
+            steps
+            {
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Sana0407/jenkins-ansible.git'
+            }
+        }
+        stage('Package the code')
+        {
+            steps
+            {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Docker Build')
+        {
+            steps
+            {
+                 sh "docker build . -t sana08/testagain:${DOCKER_TAG} "
+            }
+        }
+        stage('Docker Push')
+        {
+            steps{
+                withCredentials([string(credentialsId: 'docker-hub', variable: 'dockerhubpwd')]) {
+                sh "docker login -u sana08 -p ${dockerhubpwd}"
+                }
+                sh "docker push sana08/testagain:${DOCKER_TAG}"
+            }
+        }
+        
+    }
+}
+
+def getVersion(){
+    def commitHash = sh label: '', returnStdout: true, script: 'git rev-parse --short HEAD'
+    return commitHash
+}
